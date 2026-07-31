@@ -54,7 +54,7 @@ main :: proc() {
 
 	rl.SetTargetFPS(60)
 
-	player: Player = {{36, 36, 16 * SCALE, 16 * SCALE}, 0, rl.WHITE, player_texture}
+	player: Player = {{450, 36, 16 * SCALE, 16 * SCALE}, 0, rl.WHITE, player_texture}
 	timer: Timer = {rl.GetTime(), rl.GetTime(), 0, 5}
 	game_state: Game = .mainmenu
 
@@ -91,6 +91,8 @@ main :: proc() {
 
 			//Input
 			if (rl.GetKeyPressed() != rl.KeyboardKey.KEY_NULL) {
+
+				spawn_pipe(pipe_texture, &pipelist)
 				player.rectangle.y = 100
 				game_state = .gameplay
 			}
@@ -120,31 +122,14 @@ main :: proc() {
 			}
 
 			//Update
-			pipe_velocity = math.atan(f32(score)) + 100
+			pipe_velocity = math.atan(f32(score)) * 10 + 100
 			fmt.println(pipe_velocity)
 			//Player
 			player.rectangle.y += player.velocity * dt + 0.5 * GRAVITY * dt * dt
 			player.velocity += GRAVITY * dt
 
 			//Pipe
-			if (len(pipelist) == 0) {
-				temp_top_pipe: Pipe = {
-					{900, 0, 100, rand.float32_range(0, 200)},
-					rl.GREEN,
-					false,
-					pipe_texture,
-				}
-				temp_rand: f32 = rand.float32_range(temp_top_pipe.rectangle.height + 200, 600)
-				temp_bottom_pipe: Pipe = {
-					{900, temp_rand, 100, 800},
-					rl.GREEN,
-					false,
-					pipe_texture,
-				}
-				append(&pipelist, temp_bottom_pipe)
-				append(&pipelist, temp_top_pipe)
-			}
-
+			pipe_spawn_flag := false
 			for &pipe in pipelist {
 				pipe.rectangle.x -= pipe_velocity * dt
 			}
@@ -161,10 +146,12 @@ main :: proc() {
 					ordered_remove(&pipelist, index)
 				}
 				if (pipe.rectangle.x <= player.rectangle.x && pipe.is_scored == false) {
+					pipe_spawn_flag = true
 					score += 1
 					pipe.is_scored = true
 				}
 			}
+			if (pipe_spawn_flag) do spawn_pipe(pipe_texture, &pipelist)
 			//Floor Collision
 			if (player.rectangle.y < 0 || player.rectangle.y > 600) {
 				set_highscore()
@@ -200,6 +187,8 @@ main :: proc() {
 
 
 			if (timer.passed_time == 0) {
+
+				spawn_pipe(pipe_texture, &pipelist)
 				score = 0
 				player.rectangle.y = 100
 				game_state = .gameplay
@@ -239,4 +228,17 @@ draw_pipe :: proc(p: Pipe) {
 	rotation: f32 = 0
 	tint := rl.WHITE
 	rl.DrawTexturePro(texture, source, dest, origin, rotation, tint)
+}
+spawn_pipe :: proc(pipe_texture: rl.Texture2D, pipelist: ^[dynamic]Pipe) {
+	temp_top_pipe: Pipe = {
+		{900, 0, 100, rand.float32_range(0, 200)},
+		rl.GREEN,
+		false,
+		pipe_texture,
+	}
+	temp_rand: f32 = rand.float32_range(temp_top_pipe.rectangle.height + 200, 600)
+	temp_bottom_pipe: Pipe = {{900, temp_rand, 100, 800}, rl.GREEN, false, pipe_texture}
+	append(pipelist, temp_bottom_pipe)
+	append(pipelist, temp_top_pipe)
+
 }
