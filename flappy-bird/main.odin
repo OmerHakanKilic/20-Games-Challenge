@@ -1,5 +1,6 @@
 package main
 import "core:fmt"
+import "core:math"
 import "core:math/rand"
 import "core:os"
 import "core:strconv"
@@ -7,7 +8,8 @@ import rl "vendor:raylib"
 
 GRAVITY :: 200
 JUMP_VELOCITY :: -200
-pipe_velocity: f32 = 100
+SCALE :: 6
+pipe_velocity: f32
 score: i64 = 0
 high_score: i64 = 0
 
@@ -27,6 +29,7 @@ Player :: struct {
 	rectangle: rl.Rectangle,
 	velocity:  f32,
 	color:     rl.Color,
+	texture:   rl.Texture2D,
 }
 Pipe :: struct {
 	rectangle: rl.Rectangle,
@@ -36,25 +39,22 @@ Pipe :: struct {
 }
 
 main :: proc() {
-	rl.InitWindow(800, 600, "Flappy Bird")
+	rl.InitWindow(900, 600, "Flappy Bird")
 	defer rl.CloseWindow()
 
 	rl.InitAudioDevice()
 	defer rl.CloseAudioDevice()
 
-	jump_sfx: rl.Sound = rl.LoadSound(
-		"./Fantasy Sound Library/Fantasy Sound Library/Wav/Pickup_Gold_00.wav",
-	)
-	death_sfx: rl.Sound = rl.LoadSound(
-		"./Fantasy Sound Library/Fantasy Sound Library/Wav/Jingle_Achievement_00.wav",
-	)
+	jump_sfx: rl.Sound = rl.LoadSound("./sfx/Pickup_Gold_00.wav")
+	death_sfx: rl.Sound = rl.LoadSound("./sfx/Jingle_Achievement_00.wav")
 
+	player_texture: rl.Texture2D = rl.LoadTexture("./sprites/player.png")
 	background_texture: rl.Texture2D = rl.LoadTexture("./sprites/background.png")
 	pipe_texture: rl.Texture2D = rl.LoadTexture("./sprites/pipe.png")
 
 	rl.SetTargetFPS(60)
 
-	player: Player = {{100, 100, 100, 100}, 0, rl.RED}
+	player: Player = {{36, 36, 16 * SCALE, 16 * SCALE}, 0, rl.WHITE, player_texture}
 	timer: Timer = {rl.GetTime(), rl.GetTime(), 0, 5}
 	game_state: Game = .mainmenu
 
@@ -120,7 +120,8 @@ main :: proc() {
 			}
 
 			//Update
-			pipe_velocity += f32(score) * 0.01
+			pipe_velocity = math.atan(f32(score)) + 100
+			fmt.println(pipe_velocity)
 			//Player
 			player.rectangle.y += player.velocity * dt + 0.5 * GRAVITY * dt * dt
 			player.velocity += GRAVITY * dt
@@ -128,14 +129,14 @@ main :: proc() {
 			//Pipe
 			if (len(pipelist) == 0) {
 				temp_top_pipe: Pipe = {
-					{800, 0, 100, rand.float32_range(0, 200)},
+					{900, 0, 100, rand.float32_range(0, 200)},
 					rl.GREEN,
 					false,
 					pipe_texture,
 				}
 				temp_rand: f32 = rand.float32_range(temp_top_pipe.rectangle.height + 200, 600)
 				temp_bottom_pipe: Pipe = {
-					{800, temp_rand, 100, 600},
+					{900, temp_rand, 100, 800},
 					rl.GREEN,
 					false,
 					pipe_texture,
@@ -182,14 +183,15 @@ main :: proc() {
 				{0, 0},
 				rl.WHITE,
 			)
-			rl.DrawRectangleRec(player.rectangle, player.color)
+			rl.DrawTextureEx(
+				player_texture,
+				{player.rectangle.x, player.rectangle.y},
+				0,
+				SCALE,
+				player.color,
+			)
 			for pipe in pipelist {
-				rl.DrawTextureRec(
-					pipe_texture,
-					pipe.rectangle,
-					{pipe.rectangle.x, pipe.rectangle.y},
-					pipe.color,
-				)
+				draw_pipe(pipe)
 			}
 			rl.DrawText(rl.TextFormat("Score: %d", score), 0, 0, 20, rl.BLACK)
 			rl.EndDrawing()
@@ -227,4 +229,14 @@ main :: proc() {
 
 set_highscore :: proc() {
 	if (score > high_score) do high_score = score
+}
+
+draw_pipe :: proc(p: Pipe) {
+	texture := p.texture
+	source: rl.Rectangle = {0, 0, 16, 16}
+	dest := p.rectangle
+	origin: rl.Vector2 = {0, 0}
+	rotation: f32 = 0
+	tint := rl.WHITE
+	rl.DrawTexturePro(texture, source, dest, origin, rotation, tint)
 }
