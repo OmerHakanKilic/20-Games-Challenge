@@ -123,7 +123,7 @@ main :: proc() {
 
 			//Update
 			pipe_velocity = math.atan(f32(score)) * 10 + 100
-			fmt.println(pipe_velocity)
+
 			//Player
 			player.rectangle.y += player.velocity * dt + 0.5 * GRAVITY * dt * dt
 			player.velocity += GRAVITY * dt
