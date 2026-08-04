@@ -7,6 +7,8 @@ import rl "vendor:raylib"
 SCALING :: 5
 GRAVITY :: 500
 JUMP_VELOCITY :: -300
+FRAME1 :: rl.Rectangle{0, 0, 16, 16}
+FRAME2 :: rl.Rectangle{16, 0, 16, 16}
 obstacle_velocity := 100
 
 Game :: enum {
@@ -15,11 +17,17 @@ Game :: enum {
 	deathscreen,
 }
 
+Player_State :: enum {
+	on_air,
+	on_ground,
+}
+
 Player :: struct {
 	rectangle:  rl.Rectangle,
 	velocity_y: f32,
 	color:      rl.Color,
 	texture:    rl.Texture2D,
+	state:      Player_State,
 }
 
 Obstacle :: struct {
@@ -61,6 +69,7 @@ main :: proc() {
 		rectangle = {0, 0, 16 * SCALING, 16 * SCALING},
 		texture   = player_texture,
 		color     = rl.WHITE,
+		state     = .on_air,
 	}
 	button_list: [dynamic]Button
 	create_buttons(&button_list, play_button_texture)
@@ -109,8 +118,7 @@ handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
 	}
 
 	//Player
-	player.rectangle.y += player.velocity_y * dt + 0.5 * GRAVITY * dt * dt
-	player.velocity_y += GRAVITY * dt
+	handle_player(dt)
 
 	//Obstacles
 	if (len(obstacle_list) == 0) {
@@ -121,7 +129,7 @@ handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
 	//Draw
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.RAYWHITE)
-	rl.DrawTexturePro(player.texture, {0, 0, 16, 16}, player.rectangle, {0, 0}, 0, player.color)
+	draw_player()
 	draw_obstacles()
 	rl.EndDrawing()
 
@@ -152,6 +160,37 @@ draw_obstacles :: proc() {
 	}
 }
 
+handle_player :: proc(dt: f32) {
+	if (player.rectangle.y < (480 - (16 * SCALING))) {
+		player.state = .on_air
+	} else {
+		player.state = .on_ground
+	}
+
+	switch player.state {
+	case .on_air:
+		player.rectangle.y += player.velocity_y * dt + 0.5 * GRAVITY * dt * dt
+		player.velocity_y += GRAVITY * dt
+	case .on_ground:
+		player.rectangle.y += player.velocity_y * dt
+		if (player.rectangle.y > (480 - (16 * SCALING))) {
+			player.rectangle.y = 480 - (16 * SCALING)
+		}
+	}
+
+
+}
+
+draw_player :: proc() {
+
+	if (player.state == .on_air) {
+		rl.DrawTexturePro(player.texture, FRAME1, player.rectangle, {0, 0}, 0, player.color)
+	} else {
+
+		rl.DrawTexturePro(player.texture, FRAME2, player.rectangle, {0, 0}, 0, player.color)
+	}
+}
+
 init_timer :: proc() {
 	obstacle_timer = {
 		start_time   = rl.GetTime(),
@@ -160,6 +199,7 @@ init_timer :: proc() {
 		max_time     = 5,
 	}
 }
+
 handle_timer :: proc() {
 	obstacle_timer.current_time = rl.GetTime()
 	obstacle_timer.passed_time = obstacle_timer.current_time - obstacle_timer.start_time
