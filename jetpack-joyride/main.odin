@@ -1,11 +1,12 @@
 package main
 
+import "core:fmt"
 import "core:math/rand"
 import rl "vendor:raylib"
 
 SCALING :: 5
 GRAVITY :: 500
-JUMP_VELOCITY :: -500
+JUMP_VELOCITY :: -300
 obstacle_velocity := 100
 
 Game :: enum {
@@ -63,7 +64,6 @@ main :: proc() {
 	}
 	button_list: [dynamic]Button
 	create_buttons(&button_list, play_button_texture)
-	init_timer()
 
 	for !rl.WindowShouldClose() {
 
@@ -71,7 +71,6 @@ main :: proc() {
 		case .menu:
 			handle_menu()
 		case .gameplay:
-			handle_timer()
 			handle_gameplay(obstacle_texture)
 		case .deathscreen:
 			handle_deathscreen()
@@ -114,7 +113,8 @@ handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
 	player.velocity_y += GRAVITY * dt
 
 	//Obstacles
-	if (obstacle_timer.passed_time == 0) {
+	if (len(obstacle_list) == 0) {
+		fmt.print("Reached")
 		spawn_obstacle(obstacle_texture)
 	}
 
@@ -122,6 +122,7 @@ handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.RAYWHITE)
 	rl.DrawTexturePro(player.texture, {0, 0, 16, 16}, player.rectangle, {0, 0}, 0, player.color)
+	draw_obstacles()
 	rl.EndDrawing()
 
 }
