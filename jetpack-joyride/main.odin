@@ -9,7 +9,8 @@ GRAVITY :: 500
 JUMP_VELOCITY :: -300
 FRAME1 :: rl.Rectangle{0, 0, 16, 16}
 FRAME2 :: rl.Rectangle{16, 0, 16, 16}
-obstacle_velocity := 100
+FRAME3 :: rl.Rectangle{32, 0, 16, 16}
+obstacle_velocity: f32 = -300
 
 Game :: enum {
 	menu,
@@ -21,13 +22,20 @@ Player_State :: enum {
 	on_air,
 	on_ground,
 }
+Animation_State :: enum {
+	frame_1,
+	frame_2,
+	frame_3,
+}
 
 Player :: struct {
-	rectangle:  rl.Rectangle,
-	velocity_y: f32,
-	color:      rl.Color,
-	texture:    rl.Texture2D,
-	state:      Player_State,
+	rectangle:       rl.Rectangle,
+	velocity_y:      f32,
+	color:           rl.Color,
+	texture:         rl.Texture2D,
+	state:           Player_State,
+	animation_timer: Timer,
+	animation_frame: Animation_State,
 }
 
 Obstacle :: struct {
@@ -55,11 +63,12 @@ Timer :: struct {
 player: Player
 obstacle_list: [dynamic]Obstacle
 obstacle_timer: Timer
+gamestate: Game
 
 main :: proc() {
 
 	rl.InitWindow(720, 480, "Jetpack Joyride")
-	gamestate: Game = .gameplay
+	gamestate = .gameplay
 
 	play_button_texture := rl.LoadTexture("./sprites/play-button.png")
 	player_texture := rl.LoadTexture("./sprites/player.png")
@@ -67,9 +76,10 @@ main :: proc() {
 
 	player = {
 		rectangle = {0, 0, 16 * SCALING, 16 * SCALING},
-		texture   = player_texture,
-		color     = rl.WHITE,
-		state     = .on_air,
+		texture = player_texture,
+		color = rl.WHITE,
+		state = .on_air,
+		animation_timer = {start_time = rl.GetTime(), max_time = 0.1},
 	}
 	button_list: [dynamic]Button
 	create_buttons(&button_list, play_button_texture)
@@ -122,8 +132,15 @@ handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
 
 	//Obstacles
 	if (len(obstacle_list) == 0) {
-		fmt.print("Reached")
 		spawn_obstacle(obstacle_texture)
+	}
+	move_obstacles(dt)
+
+	//Collision
+	for o in obstacle_list {
+		if rl.CheckCollisionRecs(player.rectangle, o.rectangle) {
+			gamestate = .menu
+		}
 	}
 
 	//Draw
@@ -137,9 +154,9 @@ handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
 
 spawn_obstacle :: proc(obstacle_texture: rl.Texture2D) {
 
-	rand := rand.int31_max(600 - (16 * SCALING))
+	rand := rand.float32_range(0, 600 - (16 * SCALING))
 	temp_obstacle: Obstacle = {
-		rectangle = {0, 0, 16 * SCALING, 16 * SCALING},
+		rectangle = {720, rand, 16 * SCALING, 16 * SCALING},
 		color     = rl.RED,
 		texture   = obstacle_texture,
 	}
@@ -160,17 +177,50 @@ draw_obstacles :: proc() {
 	}
 }
 
+move_obstacles :: proc(dt: f32) {
+
+	for &o, i in obstacle_list {
+		o.rectangle.x += obstacle_velocity * dt
+		if (o.rectangle.x < -(16 * SCALING)) {
+			ordered_remove(&obstacle_list, i)
+
+		}
+	}
+}
+
 handle_player :: proc(dt: f32) {
+
+
+	//State
 	if (player.rectangle.y < (480 - (16 * SCALING))) {
 		player.state = .on_air
 	} else {
 		player.state = .on_ground
 	}
 
+	//Animation timer
+	player.animation_timer.current_time = rl.GetTime()
+	player.animation_timer.passed_time =
+		player.animation_timer.current_time - player.animation_timer.start_time
+	if (player.animation_timer.passed_time >= player.animation_timer.max_time) {
+		player.animation_timer.start_time = rl.GetTime()
+		player.animation_timer.current_time = rl.GetTime()
+		player.animation_timer.passed_time = 0
+		if (player.animation_frame == .frame_2) {
+			player.animation_frame = .frame_3
+		} else if (player.animation_frame == .frame_3) {
+			player.animation_frame = .frame_2
+		}
+	}
+
+	//Movement
 	switch player.state {
 	case .on_air:
 		player.rectangle.y += player.velocity_y * dt + 0.5 * GRAVITY * dt * dt
 		player.velocity_y += GRAVITY * dt
+		if (player.rectangle.y < 0) {
+			player.rectangle.y = 0
+		}
 	case .on_ground:
 		player.rectangle.y += player.velocity_y * dt
 		if (player.rectangle.y > (480 - (16 * SCALING))) {
@@ -183,12 +233,26 @@ handle_player :: proc(dt: f32) {
 
 draw_player :: proc() {
 
-	if (player.state == .on_air) {
-		rl.DrawTexturePro(player.texture, FRAME1, player.rectangle, {0, 0}, 0, player.color)
-	} else {
+	animation_frame: rl.Rectangle
 
-		rl.DrawTexturePro(player.texture, FRAME2, player.rectangle, {0, 0}, 0, player.color)
+	if (player.state == .on_air) {
+		player.animation_frame = .frame_1
 	}
+	if (player.state == .on_ground && player.animation_frame == .frame_1) {
+		player.animation_frame = .frame_2
+	}
+
+
+	switch player.animation_frame {
+	case .frame_1:
+		animation_frame = FRAME1
+	case .frame_2:
+		animation_frame = FRAME2
+	case .frame_3:
+		animation_frame = FRAME3
+	}
+
+	rl.DrawTexturePro(player.texture, animation_frame, player.rectangle, {0, 0}, 0, player.color)
 }
 
 init_timer :: proc() {
