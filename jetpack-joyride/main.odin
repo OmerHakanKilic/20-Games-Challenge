@@ -64,11 +64,12 @@ player: Player
 obstacle_list: [dynamic]Obstacle
 obstacle_timer: Timer
 gamestate: Game
+button_list: [dynamic]Button
 
 main :: proc() {
 
 	rl.InitWindow(720, 480, "Jetpack Joyride")
-	gamestate = .gameplay
+	gamestate = .menu
 
 	play_button_texture := rl.LoadTexture("./sprites/play-button.png")
 	player_texture := rl.LoadTexture("./sprites/player.png")
@@ -81,7 +82,6 @@ main :: proc() {
 		state = .on_air,
 		animation_timer = {start_time = rl.GetTime(), max_time = 0.1},
 	}
-	button_list: [dynamic]Button
 	create_buttons(&button_list, play_button_texture)
 
 	for !rl.WindowShouldClose() {
@@ -100,21 +100,59 @@ main :: proc() {
 handle_menu :: proc() {
 
 	//Update
-
+	handle_buttons()
 	//Draw
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.RAYWHITE)
+	draw_buttons()
 	rl.EndDrawing()
 }
 
 create_buttons :: proc(bl: ^[dynamic]Button, play_button_texture: rl.Texture2D) {
 
 	play_button: Button = {
-		rectangle  = {},
+		rectangle  = {
+			//Formula to make it on middle
+			360 - (72 * SCALING / 2),
+			240 - (32 * SCALING / 2),
+			72 * SCALING,
+			32 * SCALING,
+		},
 		color      = rl.WHITE,
 		is_pressed = false,
+		texture    = play_button_texture,
 	}
 	append(bl, play_button)
+}
+
+handle_buttons :: proc() {
+
+	mouse_pos := rl.GetMousePosition()
+	for &but in button_list {
+
+		if rl.CheckCollisionPointRec(mouse_pos, but.rectangle) && rl.IsMouseButtonDown(.LEFT) {
+			but.is_pressed = true
+		}
+		if (rl.IsMouseButtonReleased(.LEFT) && but.is_pressed == true) {
+			gamestate = .gameplay
+			but.is_pressed = false
+		}
+
+	}
+}
+
+draw_buttons :: proc() {
+
+	for button in button_list {
+		rl.DrawTexturePro(
+			button.texture,
+			{0, 0, 72, 32},
+			button.rectangle,
+			{0, 0},
+			0,
+			button.color,
+		)
+	}
 }
 
 handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
@@ -123,7 +161,7 @@ handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
 	dt := rl.GetFrameTime()
 
 	//Input
-	if rl.IsKeyDown(.SPACE) {
+	if rl.IsKeyDown(.SPACE) || rl.IsMouseButtonDown(.LEFT) {
 		player.velocity_y = JUMP_VELOCITY
 	}
 
@@ -139,6 +177,12 @@ handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
 	//Collision
 	for o in obstacle_list {
 		if rl.CheckCollisionRecs(player.rectangle, o.rectangle) {
+			for &but in button_list {
+				but.is_pressed = false
+			}
+			player.rectangle.x = 0
+			player.rectangle.y = 0
+			clear(&obstacle_list)
 			gamestate = .menu
 		}
 	}
