@@ -53,18 +53,21 @@ Button :: struct {
 }
 
 Timer :: struct {
-	start_time:   f64,
-	current_time: f64,
-	passed_time:  f64,
-	max_time:     f64,
+	start_time:   f32,
+	current_time: f32,
+	passed_time:  f32,
+	max_time:     f32,
 }
 
 //Globals
 player: Player
 obstacle_list: [dynamic]Obstacle
 obstacle_timer: Timer
+score_timer: Timer
 gamestate: Game
 button_list: [dynamic]Button
+score: f32 = 0
+
 
 main :: proc() {
 
@@ -80,7 +83,7 @@ main :: proc() {
 		texture = player_texture,
 		color = rl.WHITE,
 		state = .on_air,
-		animation_timer = {start_time = rl.GetTime(), max_time = 0.1},
+		animation_timer = {start_time = f32(rl.GetTime()), max_time = 0.1},
 	}
 	create_buttons(&button_list, play_button_texture)
 
@@ -136,6 +139,7 @@ handle_buttons :: proc() {
 		if (rl.IsMouseButtonReleased(.LEFT) && but.is_pressed == true) {
 			gamestate = .gameplay
 			but.is_pressed = false
+			init_timers()
 		}
 
 	}
@@ -159,6 +163,10 @@ handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
 
 	//Update
 	dt := rl.GetFrameTime()
+
+	handle_timers()
+
+	score = obstacle_velocity * score_timer.passed_time * (-0.001)
 
 	//Input
 	if rl.IsKeyDown(.SPACE) || rl.IsMouseButtonDown(.LEFT) {
@@ -186,10 +194,12 @@ handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
 			gamestate = .menu
 		}
 	}
+	cstr_score := rl.TextFormat("%.0f KM", score)
 
 	//Draw
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.RAYWHITE)
+	rl.DrawText(cstr_score, 0, 0, 5 * SCALING, rl.BLACK)
 	draw_player()
 	draw_obstacles()
 	rl.EndDrawing()
@@ -198,7 +208,7 @@ handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
 
 spawn_obstacle :: proc(obstacle_texture: rl.Texture2D) {
 
-	rand := rand.float32_range(0, 600 - (16 * SCALING))
+	rand := rand.float32_range(0, 480 - (16 * SCALING))
 	temp_obstacle: Obstacle = {
 		rectangle = {720, rand, 16 * SCALING, 16 * SCALING},
 		color     = rl.RED,
@@ -243,12 +253,12 @@ handle_player :: proc(dt: f32) {
 	}
 
 	//Animation timer
-	player.animation_timer.current_time = rl.GetTime()
+	player.animation_timer.current_time = f32(rl.GetTime())
 	player.animation_timer.passed_time =
 		player.animation_timer.current_time - player.animation_timer.start_time
 	if (player.animation_timer.passed_time >= player.animation_timer.max_time) {
-		player.animation_timer.start_time = rl.GetTime()
-		player.animation_timer.current_time = rl.GetTime()
+		player.animation_timer.start_time = f32(rl.GetTime())
+		player.animation_timer.current_time = f32(rl.GetTime())
 		player.animation_timer.passed_time = 0
 		if (player.animation_frame == .frame_2) {
 			player.animation_frame = .frame_3
@@ -299,21 +309,30 @@ draw_player :: proc() {
 	rl.DrawTexturePro(player.texture, animation_frame, player.rectangle, {0, 0}, 0, player.color)
 }
 
-init_timer :: proc() {
+init_timers :: proc() {
+	score_timer = {
+		start_time   = f32(rl.GetTime()),
+		current_time = f32(rl.GetTime()),
+		passed_time  = 0,
+	}
 	obstacle_timer = {
-		start_time   = rl.GetTime(),
-		current_time = rl.GetTime(),
+		start_time   = f32(rl.GetTime()),
+		current_time = f32(rl.GetTime()),
 		passed_time  = 0,
 		max_time     = 5,
 	}
 }
 
-handle_timer :: proc() {
-	obstacle_timer.current_time = rl.GetTime()
+handle_timers :: proc() {
+
+	score_timer.current_time = f32(rl.GetTime())
+	score_timer.passed_time = score_timer.current_time - score_timer.start_time
+
+	obstacle_timer.current_time = f32(rl.GetTime())
 	obstacle_timer.passed_time = obstacle_timer.current_time - obstacle_timer.start_time
 	if (obstacle_timer.passed_time >= obstacle_timer.max_time) {
-		obstacle_timer.start_time = rl.GetTime()
-		obstacle_timer.current_time = rl.GetTime()
+		obstacle_timer.start_time = f32(rl.GetTime())
+		obstacle_timer.current_time = f32(rl.GetTime())
 		obstacle_timer.passed_time = 0
 	}
 }
