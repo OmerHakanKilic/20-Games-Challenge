@@ -2,6 +2,8 @@ package main
 
 import "core:fmt"
 import "core:math/rand"
+import "core:os"
+import "core:strconv"
 import rl "vendor:raylib"
 
 SCALING :: 5
@@ -10,7 +12,6 @@ JUMP_VELOCITY :: -300
 FRAME1 :: rl.Rectangle{0, 0, 16, 16}
 FRAME2 :: rl.Rectangle{16, 0, 16, 16}
 FRAME3 :: rl.Rectangle{32, 0, 16, 16}
-obstacle_velocity: f32 = -300
 
 Game :: enum {
 	menu,
@@ -67,11 +68,13 @@ score_timer: Timer
 gamestate: Game
 button_list: [dynamic]Button
 score: f32 = 0
-
+high_score: f32 = 0
+obstacle_velocity: f32 = -300
 
 main :: proc() {
 
 	rl.InitWindow(720, 480, "Jetpack Joyride")
+	load_score()
 	gamestate = .menu
 
 	play_button_texture := rl.LoadTexture("./sprites/play-button.png")
@@ -79,7 +82,7 @@ main :: proc() {
 	obstacle_texture := rl.LoadTexture("./sprites/obstacle.png")
 
 	player = {
-		rectangle = {0, 0, 16 * SCALING, 16 * SCALING},
+		rectangle = {0, 480 - (16 * SCALING), 16 * SCALING, 16 * SCALING},
 		texture = player_texture,
 		color = rl.WHITE,
 		state = .on_air,
@@ -189,8 +192,10 @@ handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
 				but.is_pressed = false
 			}
 			player.rectangle.x = 0
-			player.rectangle.y = 0
+			player.rectangle.y = 480 - (16 * SCALING)
 			clear(&obstacle_list)
+			update_high_score()
+			save_score()
 			gamestate = .menu
 		}
 	}
@@ -199,7 +204,7 @@ handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
 	//Draw
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.RAYWHITE)
-	rl.DrawText(cstr_score, 0, 0, 5 * SCALING, rl.BLACK)
+	rl.DrawText(cstr_score, SCALING, SCALING, 5 * SCALING, rl.BLACK)
 	draw_player()
 	draw_obstacles()
 	rl.EndDrawing()
@@ -339,4 +344,30 @@ handle_timers :: proc() {
 
 handle_deathscreen :: proc() {
 
+}
+
+update_high_score :: proc() {
+	if high_score < score {
+		high_score = score
+	}
+}
+
+load_score :: proc() {
+	data, err := os.read_entire_file_from_path("./score.txt", context.temp_allocator)
+	if (err == os.ERROR_NONE) {
+		loaded_score, parse_ok := strconv.parse_int(string(data))
+		if (parse_ok) {
+			high_score = f32(loaded_score)
+		}
+	}
+
+}
+
+save_score :: proc() {
+	buf: [8]byte
+
+	err := os.write_entire_file_from_string(
+		"./score.txt",
+		strconv.write_int(buf[:], i64(high_score), 10),
+	)
 }
