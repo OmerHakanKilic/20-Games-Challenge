@@ -60,6 +60,13 @@ Timer :: struct {
 	max_time:     f32,
 }
 
+ParallaxLayer :: struct {
+	texture:   rl.Texture2D,
+	rectangle: rl.Rectangle,
+	offset:    f32,
+	velocity:  f32,
+}
+
 //Globals
 player: Player
 obstacle_list: [dynamic]Obstacle
@@ -70,7 +77,7 @@ button_list: [dynamic]Button
 score: f32 = 0
 high_score: f32 = 0
 obstacle_velocity: f32 = -300
-
+parallax_background: ParallaxLayer
 main :: proc() {
 
 	rl.InitWindow(720, 480, "Jetpack Joyride")
@@ -80,6 +87,8 @@ main :: proc() {
 	play_button_texture := rl.LoadTexture("./sprites/play-button.png")
 	player_texture := rl.LoadTexture("./sprites/player.png")
 	obstacle_texture := rl.LoadTexture("./sprites/obstacle.png")
+	parallax_background_texture := rl.LoadTexture("./sprites/parallax-background.png")
+	parallax_foreground_texture := rl.LoadTexture("./sprites/parallax-foreground.png")
 
 	player = {
 		rectangle = {0, 480 - (16 * SCALING), 16 * SCALING, 16 * SCALING},
@@ -88,6 +97,14 @@ main :: proc() {
 		state = .on_air,
 		animation_timer = {start_time = f32(rl.GetTime()), max_time = 0.1},
 	}
+
+	parallax_background = {
+		texture   = parallax_background_texture,
+		offset    = 0,
+		rectangle = {0, 0, 160 * SCALING, 64 * SCALING},
+		velocity  = 100,
+	}
+
 	create_buttons(&button_list, play_button_texture)
 
 	for !rl.WindowShouldClose() {
@@ -171,6 +188,8 @@ handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
 
 	score = obstacle_velocity * score_timer.passed_time * (-0.001)
 
+	parallax_background.offset = f32(int(parallax_background.offset + 0.1) % 16)
+
 	//Input
 	if rl.IsKeyDown(.SPACE) || rl.IsMouseButtonDown(.LEFT) {
 		player.velocity_y = JUMP_VELOCITY
@@ -204,6 +223,14 @@ handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
 	//Draw
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.RAYWHITE)
+	rl.DrawTexturePro(
+		parallax_background.texture,
+		{0 + parallax_background.offset, 0, 144, 64},
+		{0, 0, 720, 480},
+		{0, 0},
+		0,
+		rl.WHITE,
+	)
 	rl.DrawText(cstr_score, SCALING, SCALING, 5 * SCALING, rl.BLACK)
 	draw_player()
 	draw_obstacles()
