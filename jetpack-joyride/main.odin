@@ -78,6 +78,7 @@ score: f32 = 0
 high_score: f32 = 0
 obstacle_velocity: f32 = -300
 parallax_background: ParallaxLayer
+parallax_foreground: ParallaxLayer
 main :: proc() {
 
 	rl.InitWindow(720, 480, "Jetpack Joyride")
@@ -102,7 +103,13 @@ main :: proc() {
 		texture   = parallax_background_texture,
 		offset    = 0,
 		rectangle = {0, 0, 160 * SCALING, 64 * SCALING},
-		velocity  = 100,
+		velocity  = 1,
+	}
+	parallax_foreground = {
+		texture   = parallax_foreground_texture,
+		offset    = 0,
+		rectangle = {0, 0, 160 * SCALING, 96 * SCALING},
+		velocity  = 2,
 	}
 
 	create_buttons(&button_list, play_button_texture)
@@ -188,7 +195,8 @@ handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
 
 	score = obstacle_velocity * score_timer.passed_time * (-0.001)
 
-	parallax_background.offset = f32(int(parallax_background.offset + 0.1) % 16)
+	parallax_background.offset += 0.005
+	parallax_foreground.offset += 0.01
 
 	//Input
 	if rl.IsKeyDown(.SPACE) || rl.IsMouseButtonDown(.LEFT) {
@@ -223,14 +231,25 @@ handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
 	//Draw
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.RAYWHITE)
+
 	rl.DrawTexturePro(
 		parallax_background.texture,
 		{0 + parallax_background.offset, 0, 144, 64},
-		{0, 0, 720, 480},
+		{0, 16 * SCALING, 720, 64 * SCALING},
 		{0, 0},
 		0,
 		rl.WHITE,
 	)
+
+	rl.DrawTexturePro(
+		parallax_foreground.texture,
+		{0 + parallax_foreground.offset, 0, 144, 96},
+		{0, 0, 720, 96 * SCALING},
+		{0, 0},
+		0,
+		rl.WHITE,
+	)
+
 	rl.DrawText(cstr_score, SCALING, SCALING, 5 * SCALING, rl.BLACK)
 	draw_player()
 	draw_obstacles()
@@ -278,7 +297,7 @@ handle_player :: proc(dt: f32) {
 
 
 	//State
-	if (player.rectangle.y < (480 - (16 * SCALING))) {
+	if (player.rectangle.y < (480 - (24 * SCALING))) {
 		player.state = .on_air
 	} else {
 		player.state = .on_ground
@@ -309,8 +328,8 @@ handle_player :: proc(dt: f32) {
 		}
 	case .on_ground:
 		player.rectangle.y += player.velocity_y * dt
-		if (player.rectangle.y > (480 - (16 * SCALING))) {
-			player.rectangle.y = 480 - (16 * SCALING)
+		if (player.rectangle.y > (480 - (24 * SCALING))) {
+			player.rectangle.y = 480 - (24 * SCALING)
 		}
 	}
 
