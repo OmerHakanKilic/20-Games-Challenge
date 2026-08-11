@@ -223,7 +223,7 @@ handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
 			clear(&obstacle_list)
 			update_high_score()
 			save_score()
-			gamestate = .menu
+			gamestate = .deathscreen
 		}
 	}
 	cstr_score := rl.TextFormat("%.0f KM", score)
@@ -389,6 +389,11 @@ handle_timers :: proc() {
 }
 
 handle_deathscreen :: proc() {
+
+
+	rl.BeginDrawing()
+	rl.ClearBackground(rl.RAYWHITE)
+	rl.EndDrawing()
 
 }
 
