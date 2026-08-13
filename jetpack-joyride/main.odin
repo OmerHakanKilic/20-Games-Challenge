@@ -259,6 +259,23 @@ handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
 
 spawn_obstacle :: proc(obstacle_texture: rl.Texture2D) {
 
+	pattern_num := rand.int32_range(0, 4)
+
+	switch pattern_num {
+	case 0:
+		spawn_single_obstacle(obstacle_texture)
+	case 1:
+		spawn_left_leaning_obstacle(obstacle_texture)
+	case 2:
+		spawn_right_leaning_obstacle(obstacle_texture)
+	case 3:
+		spawn_long_obstacle(obstacle_texture)
+	}
+
+}
+
+spawn_single_obstacle :: proc(obstacle_texture: rl.Texture2D) {
+
 	rand := rand.float32_range(0, 480 - (16 * SCALING))
 	temp_obstacle: Obstacle = {
 		rectangle = {720, rand, 16 * SCALING, 16 * SCALING},
@@ -267,6 +284,63 @@ spawn_obstacle :: proc(obstacle_texture: rl.Texture2D) {
 	}
 
 	append(&obstacle_list, temp_obstacle)
+}
+spawn_right_leaning_obstacle :: proc(obstacle_texture: rl.Texture2D) {
+	rand := rand.float32_range(0, 480 - (16 * SCALING * 2))
+	temp_obstacle_1: Obstacle = {
+		rectangle = {720 - (16 * SCALING), rand, 16 * SCALING, 16 * SCALING},
+		color     = rl.RED,
+		texture   = obstacle_texture,
+	}
+	temp_obstacle_2: Obstacle = {
+		rectangle = {720, rand + (16 * SCALING), 16 * SCALING, 16 * SCALING},
+		color     = rl.RED,
+		texture   = obstacle_texture,
+	}
+
+	append(&obstacle_list, temp_obstacle_1)
+	append(&obstacle_list, temp_obstacle_2)
+
+}
+spawn_left_leaning_obstacle :: proc(obstacle_texture: rl.Texture2D) {
+	rand := rand.float32_range(0, 480 - (16 * SCALING * 2))
+	temp_obstacle_1: Obstacle = {
+		rectangle = {720, rand, 16 * SCALING, 16 * SCALING},
+		color     = rl.RED,
+		texture   = obstacle_texture,
+	}
+	temp_obstacle_2: Obstacle = {
+		rectangle = {720 - (16 * SCALING), rand + (16 * SCALING), 16 * SCALING, 16 * SCALING},
+		color     = rl.RED,
+		texture   = obstacle_texture,
+	}
+
+	append(&obstacle_list, temp_obstacle_1)
+	append(&obstacle_list, temp_obstacle_2)
+
+}
+
+spawn_long_obstacle :: proc(obstacle_texture: rl.Texture2D) {
+
+	rand := rand.float32_range(0, 480 - (16 * SCALING))
+	temp_obstacle_1: Obstacle = {
+		rectangle = {720, rand, 16 * SCALING, 16 * SCALING},
+		color     = rl.RED,
+		texture   = obstacle_texture,
+	}
+	temp_obstacle_2: Obstacle = {
+		rectangle = {720 - (16 * SCALING), rand, 16 * SCALING, 16 * SCALING},
+		color     = rl.RED,
+		texture   = obstacle_texture,
+	}
+	temp_obstacle_3: Obstacle = {
+		rectangle = {720 + (16 * SCALING), rand, 16 * SCALING, 16 * SCALING},
+		color     = rl.RED,
+		texture   = obstacle_texture,
+	}
+	append(&obstacle_list, temp_obstacle_1)
+	append(&obstacle_list, temp_obstacle_2)
+	append(&obstacle_list, temp_obstacle_3)
 }
 
 draw_obstacles :: proc() {
