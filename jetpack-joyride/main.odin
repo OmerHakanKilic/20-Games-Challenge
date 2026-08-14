@@ -223,10 +223,11 @@ handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
 			clear(&obstacle_list)
 			update_high_score()
 			save_score()
-			gamestate = .deathscreen
+			gamestate = .menu
 		}
 	}
 	cstr_score := rl.TextFormat("%.0f KM", score)
+	cstr_h_score := rl.TextFormat("Best Score: %.0f KM", high_score)
 
 	//Draw
 	rl.BeginDrawing()
@@ -250,7 +251,8 @@ handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
 		rl.WHITE,
 	)
 
-	rl.DrawText(cstr_score, SCALING, SCALING, 5 * SCALING, rl.BLACK)
+	rl.DrawText(cstr_h_score, SCALING, SCALING, 20, rl.BLACK)
+	rl.DrawText(cstr_score, SCALING, SCALING * 10, 20, rl.BLACK)
 	draw_player()
 	draw_obstacles()
 	rl.EndDrawing()
