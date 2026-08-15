@@ -1,5 +1,6 @@
 package main
 
+import gs "arcade-game-skeleton"
 import "core:fmt"
 import "core:math/rand"
 import "core:os"
@@ -45,13 +46,6 @@ Obstacle :: struct {
 	texture:   rl.Texture2D,
 }
 
-Button :: struct {
-	rectangle:  rl.Rectangle,
-	color:      rl.Color,
-	texture:    rl.Texture2D,
-	function:   proc(),
-	is_pressed: bool,
-}
 
 Timer :: struct {
 	start_time:   f32,
@@ -73,7 +67,8 @@ obstacle_list: [dynamic]Obstacle
 obstacle_timer: Timer
 score_timer: Timer
 gamestate: Game
-button_list: [dynamic]Button
+transition_to_gameplay_flag: bool = false
+transition_to_menu_flag: bool = false
 score: f32 = 0
 high_score: f32 = 0
 obstacle_velocity: f32 = -300
@@ -85,7 +80,6 @@ main :: proc() {
 	load_score()
 	gamestate = .menu
 
-	play_button_texture := rl.LoadTexture("./sprites/play-button.png")
 	player_texture := rl.LoadTexture("./sprites/player.png")
 	obstacle_texture := rl.LoadTexture("./sprites/obstacle.png")
 	parallax_background_texture := rl.LoadTexture("./sprites/parallax-background.png")
@@ -112,78 +106,31 @@ main :: proc() {
 		velocity  = 2,
 	}
 
-	create_buttons(&button_list, play_button_texture)
+	gs.init_game_skeleton(SCALING)
+
 
 	for !rl.WindowShouldClose() {
 
 		switch (gamestate) {
 		case .menu:
-			handle_menu()
+			transition_to_gameplay_flag = gs.handle_menu()
+			if transition_to_gameplay_flag do transition_to_gameplay()
 		case .gameplay:
 			handle_gameplay(obstacle_texture)
 		case .deathscreen:
-			handle_deathscreen()
+			transition_to_menu_flag = gs.handle_deathscreen(score, high_score)
+			if transition_to_menu_flag do transition_to_menu()
 		}
 	}
 }
 
-handle_menu :: proc() {
-
-	//Update
-	handle_buttons()
-	//Draw
-	rl.BeginDrawing()
-	rl.ClearBackground(rl.RAYWHITE)
-	draw_buttons()
-	rl.EndDrawing()
+transition_to_gameplay :: proc() {
+	gamestate = .gameplay
+	init_timers()
 }
+transition_to_menu :: proc() {
+	gamestate = .menu
 
-create_buttons :: proc(bl: ^[dynamic]Button, play_button_texture: rl.Texture2D) {
-
-	play_button: Button = {
-		rectangle  = {
-			//Formula to make it on middle
-			360 - (72 * SCALING / 2),
-			240 - (32 * SCALING / 2),
-			72 * SCALING,
-			32 * SCALING,
-		},
-		color      = rl.WHITE,
-		is_pressed = false,
-		texture    = play_button_texture,
-	}
-	append(bl, play_button)
-}
-
-handle_buttons :: proc() {
-
-	mouse_pos := rl.GetMousePosition()
-	for &but in button_list {
-
-		if rl.CheckCollisionPointRec(mouse_pos, but.rectangle) && rl.IsMouseButtonDown(.LEFT) {
-			but.is_pressed = true
-		}
-		if (rl.IsMouseButtonReleased(.LEFT) && but.is_pressed == true) {
-			gamestate = .gameplay
-			but.is_pressed = false
-			init_timers()
-		}
-
-	}
-}
-
-draw_buttons :: proc() {
-
-	for button in button_list {
-		rl.DrawTexturePro(
-			button.texture,
-			{0, 0, 72, 32},
-			button.rectangle,
-			{0, 0},
-			0,
-			button.color,
-		)
-	}
 }
 
 handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
@@ -215,15 +162,13 @@ handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
 	//Collision
 	for o in obstacle_list {
 		if rl.CheckCollisionRecs(player.rectangle, o.rectangle) {
-			for &but in button_list {
-				but.is_pressed = false
-			}
+
 			player.rectangle.x = 0
 			player.rectangle.y = 480 - (16 * SCALING)
 			clear(&obstacle_list)
 			update_high_score()
 			save_score()
-			gamestate = .menu
+			gamestate = .deathscreen
 		}
 	}
 	cstr_score := rl.TextFormat("%.0f KM", score)
@@ -287,6 +232,7 @@ spawn_single_obstacle :: proc(obstacle_texture: rl.Texture2D) {
 
 	append(&obstacle_list, temp_obstacle)
 }
+
 spawn_right_leaning_obstacle :: proc(obstacle_texture: rl.Texture2D) {
 	rand := rand.float32_range(0, 480 - (16 * SCALING * 2))
 	temp_obstacle_1: Obstacle = {
@@ -370,7 +316,6 @@ move_obstacles :: proc(dt: f32) {
 }
 
 handle_player :: proc(dt: f32) {
-
 
 	//State
 	if (player.rectangle.y < (480 - (24 * SCALING))) {
@@ -464,14 +409,6 @@ handle_timers :: proc() {
 	}
 }
 
-handle_deathscreen :: proc() {
-
-
-	rl.BeginDrawing()
-	rl.ClearBackground(rl.RAYWHITE)
-	rl.EndDrawing()
-
-}
 
 update_high_score :: proc() {
 	if high_score < score {
