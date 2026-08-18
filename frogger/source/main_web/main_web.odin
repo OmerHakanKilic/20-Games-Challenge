@@ -1,50 +1,51 @@
-package main
+// These procs are the ones that will be called from `index.html`, which is
+// generated from `index_template.html`.
 
-import gs "../arcade-game-skeleton"
-import rl "vendor:raylib"
+package main_web
 
-GameState :: enum {
-	title,
-	gameplay,
-	death,
+import game ".."
+import "base:runtime"
+import "core:c"
+import "core:mem"
+
+@(private = "file")
+web_context: runtime.Context
+
+@(export)
+main_start :: proc "c" () {
+	context = runtime.default_context()
+
+	// The WASM allocator doesn't seem to work properly in combination with
+	// emscripten. There is some kind of conflict with how the manage memory.
+	// So this sets up an allocator that uses emscripten's malloc.
+	context.allocator = emscripten_allocator()
+	runtime.init_global_temporary_allocator(1 * mem.Megabyte)
+
+	// Since we now use js_wasm32 we should be able to remove this and use
+	// context.logger = log.create_console_logger(). However, that one produces
+	// extra newlines on web. So it's a bug in that core lib.
+	context.logger = create_emscripten_logger()
+
+	web_context = context
+
+	game.init()
 }
 
-Obstacle :: struct {
-	rectangle: rl.Rectangle,
-	velocity:  f32,
-	direction: f32,
-	texture:   rl.Texture2D,
-	color:     rl.Color,
+@(export)
+main_update :: proc "c" () -> bool {
+	context = web_context
+	game.update()
+	return game.should_run()
 }
 
-score: f32 = 0
-h_score: f32 = 0
-
-main :: proc() {
-	//Init
-	rl.InitWindow(720, 480, "Frogger")
-
-	rl.SetTargetFPS(60)
-
-	gamestate: GameState = .title
-
-	gs.init_game_skeleton(5)
-
-	//Game Loop
-	for !rl.WindowShouldClose() {
-
-		switch gamestate {
-		case .title:
-			gs.handle_menu()
-		case .gameplay:
-			handle_gameplay_screen()
-		case .death:
-			gs.handle_deathscreen(score, h_score)
-		}
-	}
+@(export)
+main_end :: proc "c" () {
+	context = web_context
+	game.shutdown()
 }
 
-
-handle_gameplay_screen :: proc() {
-
+@(export)
+web_window_size_changed :: proc "c" (w: c.int, h: c.int) {
+	context = web_context
+	game.parent_window_size_changed(int(w), int(h))
 }

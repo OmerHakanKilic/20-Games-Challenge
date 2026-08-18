@@ -1,50 +1,23 @@
-package main
+package main_desktop
 
-import gs "../arcade-game-skeleton"
-import rl "vendor:raylib"
-
-GameState :: enum {
-	title,
-	gameplay,
-	death,
-}
-
-Obstacle :: struct {
-	rectangle: rl.Rectangle,
-	velocity:  f32,
-	direction: f32,
-	texture:   rl.Texture2D,
-	color:     rl.Color,
-}
-
-score: f32 = 0
-h_score: f32 = 0
+import game ".."
+import "core:log"
+import "core:os"
+import "core:path/filepath"
 
 main :: proc() {
-	//Init
-	rl.InitWindow(720, 480, "Frogger")
+	// Set working dir to dir of executable.
+	exe_path := os.args[0]
+	exe_dir := filepath.dir(string(exe_path))
+	os.set_working_directory(exe_dir)
 
-	rl.SetTargetFPS(60)
+	context.logger = log.create_console_logger()
 
-	gamestate: GameState = .title
+	game.init()
 
-	gs.init_game_skeleton(5)
-
-	//Game Loop
-	for !rl.WindowShouldClose() {
-
-		switch gamestate {
-		case .title:
-			gs.handle_menu()
-		case .gameplay:
-			handle_gameplay_screen()
-		case .death:
-			gs.handle_deathscreen(score, h_score)
-		}
+	for game.should_run() {
+		game.update()
 	}
-}
 
-
-handle_gameplay_screen :: proc() {
-
+	game.shutdown()
 }
