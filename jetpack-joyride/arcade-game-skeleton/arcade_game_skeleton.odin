@@ -6,7 +6,6 @@ Button :: struct {
 	rectangle:  rl.Rectangle,
 	color:      rl.Color,
 	texture:    rl.Texture2D,
-	function:   proc(),
 	is_pressed: bool,
 }
 
@@ -14,7 +13,7 @@ button_list: [dynamic]Button
 
 init_game_skeleton :: proc(SCALING: f32) {
 
-	play_button_texture := rl.LoadTexture("./sprites/play-button.png")
+	play_button_texture := rl.LoadTexture("./assets/play-button.png")
 	create_buttons(play_button_texture, SCALING)
 }
 

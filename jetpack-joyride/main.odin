@@ -76,10 +76,10 @@ main :: proc() {
 	rl.InitWindow(720, 480, "Jetpack Joyride")
 	gamestate = .menu
 
-	player_texture := rl.LoadTexture("./sprites/player.png")
-	obstacle_texture := rl.LoadTexture("./sprites/obstacle.png")
-	parallax_background_texture := rl.LoadTexture("./sprites/parallax-background.png")
-	parallax_foreground_texture := rl.LoadTexture("./sprites/parallax-foreground.png")
+	player_texture := rl.LoadTexture("./assets/player.png")
+	obstacle_texture := rl.LoadTexture("./assets/obstacle.png")
+	parallax_background_texture := rl.LoadTexture("./assets/parallax-background.png")
+	parallax_foreground_texture := rl.LoadTexture("./assets/parallax-foreground.png")
 
 	player = {
 		rectangle = {0, 480 - (16 * SCALING), 16 * SCALING, 16 * SCALING},

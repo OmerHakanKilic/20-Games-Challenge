@@ -69,17 +69,20 @@ transition_to_menu_flag: bool = false
 score: f32 = 0
 high_score: f32 = 0
 obstacle_velocity: f32 = -300
+obstacle_texture: rl.Texture2D
 parallax_background: ParallaxLayer
 parallax_foreground: ParallaxLayer
-main :: proc() {
+
+@(export)
+main_start :: proc() {
 
 	rl.InitWindow(720, 480, "Jetpack Joyride")
 	gamestate = .menu
 
-	player_texture := rl.LoadTexture("./sprites/player.png")
-	obstacle_texture := rl.LoadTexture("./sprites/obstacle.png")
-	parallax_background_texture := rl.LoadTexture("./sprites/parallax-background.png")
-	parallax_foreground_texture := rl.LoadTexture("./sprites/parallax-foreground.png")
+	player_texture := rl.LoadTexture("./assets/player.png")
+	obstacle_texture = rl.LoadTexture("./assets/obstacle.png")
+	parallax_background_texture := rl.LoadTexture("./assets/parallax-background.png")
+	parallax_foreground_texture := rl.LoadTexture("./assets/parallax-foreground.png")
 
 	player = {
 		rectangle = {0, 480 - (16 * SCALING), 16 * SCALING, 16 * SCALING},
@@ -105,20 +108,29 @@ main :: proc() {
 	gs.init_game_skeleton(SCALING)
 
 
-	for !rl.WindowShouldClose() {
-
-		switch (gamestate) {
-		case .menu:
-			transition_to_gameplay_flag = gs.handle_menu()
-			if transition_to_gameplay_flag do transition_to_gameplay()
-		case .gameplay:
-			handle_gameplay(obstacle_texture)
-		case .deathscreen:
-			transition_to_menu_flag = gs.handle_deathscreen(score, high_score)
-			if transition_to_menu_flag do transition_to_menu()
-		}
-	}
 }
+
+@(export)
+main_update :: proc() -> bool {
+	switch (gamestate) {
+	case .menu:
+		transition_to_gameplay_flag = gs.handle_menu()
+		if transition_to_gameplay_flag do transition_to_gameplay()
+	case .gameplay:
+		handle_gameplay(obstacle_texture)
+	case .deathscreen:
+		transition_to_menu_flag = gs.handle_deathscreen(score, high_score)
+		if transition_to_menu_flag do transition_to_menu()
+	}
+
+	return !rl.WindowShouldClose()
+}
+
+@(export)
+main_end :: proc() {
+
+}
+
 
 transition_to_gameplay :: proc() {
 	gamestate = .gameplay
