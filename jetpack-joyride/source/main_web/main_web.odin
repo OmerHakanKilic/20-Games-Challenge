@@ -1,6 +1,6 @@
-package web
+package main
 
-import gs "arcade-game-skeleton"
+import gs "../../arcade-game-skeleton"
 import "core:math/rand"
 import rl "vendor:raylib"
 
