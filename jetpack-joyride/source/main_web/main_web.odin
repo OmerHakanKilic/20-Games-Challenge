@@ -1,424 +1,51 @@
-package main
+// These procs are the ones that will be called from `index.html`, which is
+// generated from `index_template.html`.
 
-import gs "../../arcade-game-skeleton"
-import "core:math/rand"
-import rl "vendor:raylib"
+package main_web
 
-SCALING :: 5
-GRAVITY :: 500
-JUMP_VELOCITY :: -300
-FRAME1 :: rl.Rectangle{0, 0, 16, 16}
-FRAME2 :: rl.Rectangle{16, 0, 16, 16}
-FRAME3 :: rl.Rectangle{32, 0, 16, 16}
+import "base:runtime"
+import "core:c"
+import "core:mem"
+import game ".."
 
-Game :: enum {
-	menu,
-	gameplay,
-	deathscreen,
+@(private="file")
+web_context: runtime.Context
+
+@export
+main_start :: proc "c" () {
+	context = runtime.default_context()
+
+	// The WASM allocator doesn't seem to work properly in combination with
+	// emscripten. There is some kind of conflict with how the manage memory.
+	// So this sets up an allocator that uses emscripten's malloc.
+	context.allocator = emscripten_allocator()
+	runtime.init_global_temporary_allocator(1*mem.Megabyte)
+
+	// Since we now use js_wasm32 we should be able to remove this and use
+	// context.logger = log.create_console_logger(). However, that one produces
+	// extra newlines on web. So it's a bug in that core lib.
+	context.logger = create_emscripten_logger()
+
+	web_context = context
+
+	game.init()
 }
 
-Player_State :: enum {
-	on_air,
-	on_ground,
-}
-Animation_State :: enum {
-	frame_1,
-	frame_2,
-	frame_3,
+@export
+main_update :: proc "c" () -> bool {
+	context = web_context
+	game.update()
+	return game.should_run()
 }
 
-Player :: struct {
-	rectangle:       rl.Rectangle,
-	velocity_y:      f32,
-	color:           rl.Color,
-	texture:         rl.Texture2D,
-	state:           Player_State,
-	animation_timer: Timer,
-	animation_frame: Animation_State,
+@export
+main_end :: proc "c" () {
+	context = web_context
+	game.shutdown()
 }
 
-Obstacle :: struct {
-	rectangle: rl.Rectangle,
-	color:     rl.Color,
-	texture:   rl.Texture2D,
-}
-
-
-Timer :: struct {
-	start_time:   f32,
-	current_time: f32,
-	passed_time:  f32,
-	max_time:     f32,
-}
-
-ParallaxLayer :: struct {
-	texture:   rl.Texture2D,
-	rectangle: rl.Rectangle,
-	offset:    f32,
-	velocity:  f32,
-}
-
-//Globals
-player: Player
-obstacle_list: [dynamic]Obstacle
-obstacle_timer: Timer
-score_timer: Timer
-gamestate: Game
-transition_to_gameplay_flag: bool = false
-transition_to_menu_flag: bool = false
-score: f32 = 0
-high_score: f32 = 0
-obstacle_velocity: f32 = -300
-obstacle_texture: rl.Texture2D
-parallax_background: ParallaxLayer
-parallax_foreground: ParallaxLayer
-
-@(export)
-main_start :: proc() {
-
-	rl.InitWindow(720, 480, "Jetpack Joyride")
-	gamestate = .menu
-
-	player_texture := rl.LoadTexture("./assets/player.png")
-	obstacle_texture = rl.LoadTexture("./assets/obstacle.png")
-	parallax_background_texture := rl.LoadTexture("./assets/parallax-background.png")
-	parallax_foreground_texture := rl.LoadTexture("./assets/parallax-foreground.png")
-
-	player = {
-		rectangle = {0, 480 - (16 * SCALING), 16 * SCALING, 16 * SCALING},
-		texture = player_texture,
-		color = rl.WHITE,
-		state = .on_air,
-		animation_timer = {start_time = f32(rl.GetTime()), max_time = 0.1},
-	}
-
-	parallax_background = {
-		texture   = parallax_background_texture,
-		offset    = 0,
-		rectangle = {0, 0, 160 * SCALING, 64 * SCALING},
-		velocity  = 1,
-	}
-	parallax_foreground = {
-		texture   = parallax_foreground_texture,
-		offset    = 0,
-		rectangle = {0, 0, 160 * SCALING, 96 * SCALING},
-		velocity  = 2,
-	}
-
-	gs.init_game_skeleton(SCALING)
-
-
-}
-
-@(export)
-main_update :: proc() -> bool {
-	switch (gamestate) {
-	case .menu:
-		transition_to_gameplay_flag = gs.handle_menu()
-		if transition_to_gameplay_flag do transition_to_gameplay()
-	case .gameplay:
-		handle_gameplay(obstacle_texture)
-	case .deathscreen:
-		transition_to_menu_flag = gs.handle_deathscreen(score, high_score)
-		if transition_to_menu_flag do transition_to_menu()
-	}
-
-	return !rl.WindowShouldClose()
-}
-
-@(export)
-main_end :: proc() {
-
-}
-
-
-transition_to_gameplay :: proc() {
-	gamestate = .gameplay
-	init_timers()
-}
-transition_to_menu :: proc() {
-	gamestate = .menu
-
-}
-
-handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
-
-	//Update
-	dt := rl.GetFrameTime()
-
-	handle_timers()
-
-	score = obstacle_velocity * score_timer.passed_time * (-0.001)
-
-	parallax_background.offset += 0.005
-	parallax_foreground.offset += 0.01
-
-	//Input
-	if rl.IsKeyDown(.SPACE) || rl.IsMouseButtonDown(.LEFT) {
-		player.velocity_y = JUMP_VELOCITY
-	}
-
-	//Player
-	handle_player(dt)
-
-	//Obstacles
-	if (len(obstacle_list) == 0) {
-		spawn_obstacle(obstacle_texture)
-	}
-	move_obstacles(dt)
-
-	//Collision
-	for o in obstacle_list {
-		if rl.CheckCollisionRecs(player.rectangle, o.rectangle) {
-
-			player.rectangle.x = 0
-			player.rectangle.y = 480 - (16 * SCALING)
-			clear(&obstacle_list)
-			update_high_score()
-			gamestate = .deathscreen
-		}
-	}
-	cstr_score := rl.TextFormat("%.0f KM", score)
-	cstr_h_score := rl.TextFormat("Best Score: %.0f KM", high_score)
-
-	//Draw
-	rl.BeginDrawing()
-	rl.ClearBackground(rl.RAYWHITE)
-
-	rl.DrawTexturePro(
-		parallax_background.texture,
-		{0 + parallax_background.offset, 0, 144, 64},
-		{0, 16 * SCALING, 720, 64 * SCALING},
-		{0, 0},
-		0,
-		rl.WHITE,
-	)
-
-	rl.DrawTexturePro(
-		parallax_foreground.texture,
-		{0 + parallax_foreground.offset, 0, 144, 96},
-		{0, 0, 720, 96 * SCALING},
-		{0, 0},
-		0,
-		rl.WHITE,
-	)
-
-	rl.DrawText(cstr_h_score, SCALING, SCALING, 20, rl.BLACK)
-	rl.DrawText(cstr_score, SCALING, SCALING * 10, 20, rl.BLACK)
-	draw_player()
-	draw_obstacles()
-	rl.EndDrawing()
-
-}
-
-spawn_obstacle :: proc(obstacle_texture: rl.Texture2D) {
-
-	pattern_num := rand.int32_range(0, 4)
-
-	switch pattern_num {
-	case 0:
-		spawn_single_obstacle(obstacle_texture)
-	case 1:
-		spawn_left_leaning_obstacle(obstacle_texture)
-	case 2:
-		spawn_right_leaning_obstacle(obstacle_texture)
-	case 3:
-		spawn_long_obstacle(obstacle_texture)
-	}
-
-}
-
-spawn_single_obstacle :: proc(obstacle_texture: rl.Texture2D) {
-
-	rand := rand.float32_range(0, 480 - (16 * SCALING))
-	temp_obstacle: Obstacle = {
-		rectangle = {720, rand, 16 * SCALING, 16 * SCALING},
-		color     = rl.RED,
-		texture   = obstacle_texture,
-	}
-
-	append(&obstacle_list, temp_obstacle)
-}
-
-spawn_right_leaning_obstacle :: proc(obstacle_texture: rl.Texture2D) {
-	rand := rand.float32_range(0, 480 - (16 * SCALING * 2))
-	temp_obstacle_1: Obstacle = {
-		rectangle = {720 - (16 * SCALING), rand, 16 * SCALING, 16 * SCALING},
-		color     = rl.RED,
-		texture   = obstacle_texture,
-	}
-	temp_obstacle_2: Obstacle = {
-		rectangle = {720, rand + (16 * SCALING), 16 * SCALING, 16 * SCALING},
-		color     = rl.RED,
-		texture   = obstacle_texture,
-	}
-
-	append(&obstacle_list, temp_obstacle_1)
-	append(&obstacle_list, temp_obstacle_2)
-
-}
-spawn_left_leaning_obstacle :: proc(obstacle_texture: rl.Texture2D) {
-	rand := rand.float32_range(0, 480 - (16 * SCALING * 2))
-	temp_obstacle_1: Obstacle = {
-		rectangle = {720, rand, 16 * SCALING, 16 * SCALING},
-		color     = rl.RED,
-		texture   = obstacle_texture,
-	}
-	temp_obstacle_2: Obstacle = {
-		rectangle = {720 - (16 * SCALING), rand + (16 * SCALING), 16 * SCALING, 16 * SCALING},
-		color     = rl.RED,
-		texture   = obstacle_texture,
-	}
-
-	append(&obstacle_list, temp_obstacle_1)
-	append(&obstacle_list, temp_obstacle_2)
-
-}
-
-spawn_long_obstacle :: proc(obstacle_texture: rl.Texture2D) {
-
-	rand := rand.float32_range(0, 480 - (16 * SCALING))
-	temp_obstacle_1: Obstacle = {
-		rectangle = {720, rand, 16 * SCALING, 16 * SCALING},
-		color     = rl.RED,
-		texture   = obstacle_texture,
-	}
-	temp_obstacle_2: Obstacle = {
-		rectangle = {720 - (16 * SCALING), rand, 16 * SCALING, 16 * SCALING},
-		color     = rl.RED,
-		texture   = obstacle_texture,
-	}
-	temp_obstacle_3: Obstacle = {
-		rectangle = {720 + (16 * SCALING), rand, 16 * SCALING, 16 * SCALING},
-		color     = rl.RED,
-		texture   = obstacle_texture,
-	}
-	append(&obstacle_list, temp_obstacle_1)
-	append(&obstacle_list, temp_obstacle_2)
-	append(&obstacle_list, temp_obstacle_3)
-}
-
-draw_obstacles :: proc() {
-	for obstacle in obstacle_list {
-		rl.DrawTexturePro(
-			obstacle.texture,
-			{0, 0, 16, 16},
-			obstacle.rectangle,
-			{0, 0},
-			0,
-			obstacle.color,
-		)
-	}
-}
-
-move_obstacles :: proc(dt: f32) {
-
-	for &o, i in obstacle_list {
-		o.rectangle.x += obstacle_velocity * dt
-		if (o.rectangle.x < -(16 * SCALING)) {
-			ordered_remove(&obstacle_list, i)
-
-		}
-	}
-}
-
-handle_player :: proc(dt: f32) {
-
-	//State
-	if (player.rectangle.y < (480 - (24 * SCALING))) {
-		player.state = .on_air
-	} else {
-		player.state = .on_ground
-	}
-
-	//Animation timer
-	player.animation_timer.current_time = f32(rl.GetTime())
-	player.animation_timer.passed_time =
-		player.animation_timer.current_time - player.animation_timer.start_time
-	if (player.animation_timer.passed_time >= player.animation_timer.max_time) {
-		player.animation_timer.start_time = f32(rl.GetTime())
-		player.animation_timer.current_time = f32(rl.GetTime())
-		player.animation_timer.passed_time = 0
-		if (player.animation_frame == .frame_2) {
-			player.animation_frame = .frame_3
-		} else if (player.animation_frame == .frame_3) {
-			player.animation_frame = .frame_2
-		}
-	}
-
-	//Movement
-	switch player.state {
-	case .on_air:
-		player.rectangle.y += player.velocity_y * dt + 0.5 * GRAVITY * dt * dt
-		player.velocity_y += GRAVITY * dt
-		if (player.rectangle.y < 0) {
-			player.rectangle.y = 0
-		}
-	case .on_ground:
-		player.rectangle.y += player.velocity_y * dt
-		if (player.rectangle.y > (480 - (24 * SCALING))) {
-			player.rectangle.y = 480 - (24 * SCALING)
-		}
-	}
-
-
-}
-
-draw_player :: proc() {
-
-	animation_frame: rl.Rectangle
-
-	if (player.state == .on_air) {
-		player.animation_frame = .frame_1
-	}
-	if (player.state == .on_ground && player.animation_frame == .frame_1) {
-		player.animation_frame = .frame_2
-	}
-
-
-	switch player.animation_frame {
-	case .frame_1:
-		animation_frame = FRAME1
-	case .frame_2:
-		animation_frame = FRAME2
-	case .frame_3:
-		animation_frame = FRAME3
-	}
-
-	rl.DrawTexturePro(player.texture, animation_frame, player.rectangle, {0, 0}, 0, player.color)
-}
-
-init_timers :: proc() {
-	score_timer = {
-		start_time   = f32(rl.GetTime()),
-		current_time = f32(rl.GetTime()),
-		passed_time  = 0,
-	}
-	obstacle_timer = {
-		start_time   = f32(rl.GetTime()),
-		current_time = f32(rl.GetTime()),
-		passed_time  = 0,
-		max_time     = 5,
-	}
-}
-
-handle_timers :: proc() {
-
-	score_timer.current_time = f32(rl.GetTime())
-	score_timer.passed_time = score_timer.current_time - score_timer.start_time
-
-	obstacle_timer.current_time = f32(rl.GetTime())
-	obstacle_timer.passed_time = obstacle_timer.current_time - obstacle_timer.start_time
-	if (obstacle_timer.passed_time >= obstacle_timer.max_time) {
-		obstacle_timer.start_time = f32(rl.GetTime())
-		obstacle_timer.current_time = f32(rl.GetTime())
-		obstacle_timer.passed_time = 0
-	}
-}
-
-
-update_high_score :: proc() {
-	if high_score < score {
-		high_score = score
-	}
+@export
+web_window_size_changed :: proc "c" (w: c.int, h: c.int) {
+	context = web_context
+	game.parent_window_size_changed(int(w), int(h))
 }

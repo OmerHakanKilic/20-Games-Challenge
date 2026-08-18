@@ -1,6 +1,5 @@
 <!doctype html>
 <html lang="en-us">
-
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
@@ -11,14 +10,13 @@
 	<meta name="viewport" content="width=device-width">
 
 	<style>
-		body {
-			margin: 0px;
-			overflow: hidden;
+		body { 
+			margin: 0px; 
+			overflow: hidden; 
 			background-color: black;
 		}
-
-		canvas.game_canvas {
-			border: 0px none;
+		canvas.game_canvas { 
+			border: 0px none; 
 			background-color: black;
 			padding-left: 0;
 			padding-right: 0;
@@ -28,10 +26,8 @@
 		}
 	</style>
 </head>
-
 <body>
-	<canvas class="game_canvas" id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"
-		onmousedown="event.target.focus()" onkeydown="event.preventDefault()"></canvas>
+	<canvas class="game_canvas" id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1" onmousedown="event.target.focus()" onkeydown="event.preventDefault()"></canvas>
 	<script type="text/javascript" src="odin.js"></script>
 	<script>
 		var odinMemoryInterface = new odin.WasmMemoryInterface();
@@ -47,7 +43,7 @@
 					...imports
 				}
 
-				return WebAssembly.instantiateStreaming(fetch("index.wasm"), newImports).then(function (output) {
+				return WebAssembly.instantiateStreaming(fetch("index.wasm"), newImports).then(function(output) {
 					var e = output.instance.exports;
 					odinMemoryInterface.setExports(e);
 					odinMemoryInterface.setMemory(e.memory);
@@ -71,7 +67,7 @@
 					e.web_window_size_changed(canvas.width, canvas.height);
 				}
 
-				window.addEventListener('resize', function (event) {
+				window.addEventListener('resize', function(event) {
 					send_resize();
 				}, true);
 
@@ -94,19 +90,19 @@
 
 				window.requestAnimationFrame(do_main_update);
 			},
-			print: (function () {
+			print: (function() {
 				var element = document.getElementById("output");
 				if (element) element.value = ''; // clear browser cache
-				return function (text) {
+				return function(text) {
 					if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
 					console.log(text);
 					if (element) {
-						element.value += text + "\n";
-						element.scrollTop = element.scrollHeight; // focus on bottom
+					  element.value += text + "\n";
+					  element.scrollTop = element.scrollHeight; // focus on bottom
 					}
 				};
 			})(),
-			canvas: (function () {
+			canvas: (function() {
 				return document.getElementById("canvas");
 			})()
 		};
@@ -115,5 +111,4 @@
 	<!-- Emscripten injects its javascript here -->
 	{{{ SCRIPT }}}
 </body>
-
 </html>

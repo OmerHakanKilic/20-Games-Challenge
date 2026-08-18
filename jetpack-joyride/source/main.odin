@@ -1,6 +1,7 @@
 package web
 
 import gs "arcade-game-skeleton"
+import "core:c"
 import "core:math/rand"
 import rl "vendor:raylib"
 
@@ -59,6 +60,7 @@ ParallaxLayer :: struct {
 }
 
 //Globals
+run: bool
 player: Player
 obstacle_list: [dynamic]Obstacle
 obstacle_timer: Timer
@@ -69,15 +71,17 @@ transition_to_menu_flag: bool = false
 score: f32 = 0
 high_score: f32 = 0
 obstacle_velocity: f32 = -300
+obstacle_texture: rl.Texture2D
 parallax_background: ParallaxLayer
 parallax_foreground: ParallaxLayer
-main :: proc() {
 
+init :: proc() {
+	run = true
 	rl.InitWindow(720, 480, "Jetpack Joyride")
 	gamestate = .menu
 
 	player_texture := rl.LoadTexture("./assets/player.png")
-	obstacle_texture := rl.LoadTexture("./assets/obstacle.png")
+	obstacle_texture = rl.LoadTexture("./assets/obstacle.png")
 	parallax_background_texture := rl.LoadTexture("./assets/parallax-background.png")
 	parallax_foreground_texture := rl.LoadTexture("./assets/parallax-foreground.png")
 
@@ -105,19 +109,40 @@ main :: proc() {
 	gs.init_game_skeleton(SCALING)
 
 
-	for !rl.WindowShouldClose() {
+}
 
-		switch (gamestate) {
-		case .menu:
-			transition_to_gameplay_flag = gs.handle_menu()
-			if transition_to_gameplay_flag do transition_to_gameplay()
-		case .gameplay:
-			handle_gameplay(obstacle_texture)
-		case .deathscreen:
-			transition_to_menu_flag = gs.handle_deathscreen(score, high_score)
-			if transition_to_menu_flag do transition_to_menu()
+update :: proc() {
+	switch (gamestate) {
+	case .menu:
+		transition_to_gameplay_flag = gs.handle_menu()
+		if transition_to_gameplay_flag do transition_to_gameplay()
+	case .gameplay:
+		handle_gameplay(obstacle_texture)
+	case .deathscreen:
+		transition_to_menu_flag = gs.handle_deathscreen(score, high_score)
+		if transition_to_menu_flag do transition_to_menu()
+	}
+}
+
+// In a web build, this is called when browser changes size. Remove the
+// `rl.SetWindowSize` call if you don't want a resizable game.
+parent_window_size_changed :: proc(w, h: int) {
+	rl.SetWindowSize(c.int(w), c.int(h))
+}
+
+shutdown :: proc() {
+	rl.CloseWindow()
+}
+
+should_run :: proc() -> bool {
+	when ODIN_OS != .JS {
+		// Never run this proc in browser. It contains a 16 ms sleep on web!
+		if rl.WindowShouldClose() {
+			run = false
 		}
 	}
+
+	return run
 }
 
 transition_to_gameplay :: proc() {
