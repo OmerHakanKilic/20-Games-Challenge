@@ -10,19 +10,21 @@
 	<meta name="viewport" content="width=device-width">
 
 	<style>
-		body { 
-			margin: 0px; 
-			overflow: hidden; 
-			background-color: black;
+		html, body {
+			height: 100%;
 		}
-		canvas.game_canvas { 
-			border: 0px none; 
+		body {
+			margin: 0px;
+			overflow: hidden;
 			background-color: black;
-			padding-left: 0;
-			padding-right: 0;
-			margin-left: auto;
-			margin-right: auto;
-			display: block;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+		canvas.game_canvas {
+			border: 0px none;
+			background-color: black;
+			image-rendering: pixelated;
 		}
 	</style>
 </head>
@@ -33,6 +35,24 @@
 		var odinMemoryInterface = new odin.WasmMemoryInterface();
 		odinMemoryInterface.setIntSize(4);
 		var odinImports = odin.setupDefaultImports(odinMemoryInterface);
+
+		// The game always renders at this fixed internal resolution. The canvas
+		// is scaled to fit the viewport with CSS (letterboxed), so it works
+		// inside iframes of any size (e.g. itch.io) and on mobile.
+		var GAME_WIDTH = 720;
+		var GAME_HEIGHT = 480;
+
+		function fit_canvas_to_viewport() {
+			var canvas = document.getElementById('canvas');
+			var scale = Math.min(
+				window.innerWidth / GAME_WIDTH,
+				window.innerHeight / GAME_HEIGHT
+			);
+			// Snap to whole multiples when upscaling for perfectly crisp pixels.
+			if (scale > 1) scale = Math.floor(scale);
+			canvas.style.width = Math.floor(GAME_WIDTH * scale) + 'px';
+			canvas.style.height = Math.floor(GAME_HEIGHT * scale) + 'px';
+		}
 
 		// The Module is used as configuration for emscripten.
 		var Module = {
@@ -62,19 +82,16 @@
 				// main_update and main_end.
 				e.main_start();
 
-				function send_resize() {
-					var canvas = document.getElementById('canvas');
-					e.web_window_size_changed(canvas.width, canvas.height);
+				// Fit the canvas once raylib has initialized it, and again
+				// after layout settles (mobile URL bars, itch.io iframe...).
+				fit_canvas_to_viewport();
+				window.requestAnimationFrame(fit_canvas_to_viewport);
+
+				window.addEventListener('resize', fit_canvas_to_viewport, true);
+				window.addEventListener('orientationchange', fit_canvas_to_viewport);
+				if (window.visualViewport) {
+					window.visualViewport.addEventListener('resize', fit_canvas_to_viewport);
 				}
-
-				window.addEventListener('resize', function(event) {
-					send_resize();
-				}, true);
-
-				// This can probably be done better: Ideally we'd feed the
-				// initial size to `main_start`. But there seems to be a
-				// race condition. `canvas` doesn't have it's correct size yet.
-				send_resize();
 
 				// Runs the "main loop".
 				function do_main_update() {

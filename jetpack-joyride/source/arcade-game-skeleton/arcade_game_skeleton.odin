@@ -87,20 +87,14 @@ handle_deathscreen :: proc(score: f32, h_score: f32) -> bool {
 	cstr_score := rl.TextFormat("%.0f KM", score)
 	cstr_h_score := rl.TextFormat("Best Score: %.0f KM", h_score)
 
-	if (rl.IsKeyReleased(.SPACE)) do transition_flag = true
+	if (rl.IsKeyReleased(.SPACE) || rl.IsMouseButtonPressed(.LEFT)) do transition_flag = true
 
 	//Draw
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.RAYWHITE)
 	rl.DrawText(cstr_score, 40, rl.GetScreenHeight() / 2, 40, rl.BLACK)
 	rl.DrawText(cstr_h_score, 40, rl.GetScreenHeight() / 2 + 40, 40, rl.BLACK)
-	rl.DrawText(
-		"Press Space to go to the menu...",
-		40,
-		rl.GetScreenHeight() / 2 + 80,
-		40,
-		rl.BLACK,
-	)
+	rl.DrawText("Click to go to the menu...", 40, rl.GetScreenHeight() / 2 + 80, 40, rl.BLACK)
 
 	rl.EndDrawing()
 

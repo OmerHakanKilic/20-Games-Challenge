@@ -1,7 +1,6 @@
 package web
 
 import gs "arcade-game-skeleton"
-import "core:c"
 import "core:math"
 import "core:math/rand"
 import rl "vendor:raylib"
@@ -123,12 +122,6 @@ update :: proc() {
 		transition_to_menu_flag = gs.handle_deathscreen(score, high_score)
 		if transition_to_menu_flag do transition_to_menu()
 	}
-}
-
-// In a web build, this is called when browser changes size. Remove the
-// `rl.SetWindowSize` call if you don't want a resizable game.
-parent_window_size_changed :: proc(w, h: int) {
-	rl.SetWindowSize(c.int(w), c.int(h))
 }
 
 shutdown :: proc() {

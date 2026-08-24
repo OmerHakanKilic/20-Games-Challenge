@@ -4,7 +4,6 @@
 package main_web
 
 import "base:runtime"
-import "core:c"
 import "core:mem"
 import game ".."
 
@@ -42,10 +41,4 @@ main_update :: proc "c" () -> bool {
 main_end :: proc "c" () {
 	context = web_context
 	game.shutdown()
-}
-
-@export
-web_window_size_changed :: proc "c" (w: c.int, h: c.int) {
-	context = web_context
-	game.parent_window_size_changed(int(w), int(h))
 }
