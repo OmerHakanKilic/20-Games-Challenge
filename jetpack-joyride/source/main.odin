@@ -2,6 +2,7 @@ package web
 
 import gs "arcade-game-skeleton"
 import "core:c"
+import "core:math"
 import "core:math/rand"
 import rl "vendor:raylib"
 
@@ -154,6 +155,30 @@ transition_to_menu :: proc() {
 
 }
 
+// Draws a scrolling parallax layer by splitting the visible window at the
+// texture seam, so no UV ever goes past the texture edge. This avoids relying
+// on texture wrapping, which WebGL does not support for non-power-of-two
+// textures.
+draw_parallax_layer :: proc(layer: ParallaxLayer, window_w, tex_w, tex_h: f32, dest_y: f32) {
+	x := layer.offset
+	dest_x := f32(0)
+	remaining := window_w
+	for remaining > 0 {
+		w := min(tex_w - x, remaining)
+		rl.DrawTexturePro(
+			layer.texture,
+			{x, 0, w, tex_h},
+			{dest_x * SCALING, dest_y, w * SCALING, tex_h * SCALING},
+			{0, 0},
+			0,
+			rl.WHITE,
+		)
+		dest_x += w
+		x = 0
+		remaining -= w
+	}
+}
+
 handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
 
 	//Update
@@ -163,8 +188,8 @@ handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
 
 	score = obstacle_velocity * score_timer.passed_time * (-0.001)
 
-	parallax_background.offset += 10 * dt
-	parallax_foreground.offset += 20 * dt
+	parallax_background.offset = math.mod(parallax_background.offset + 10 * dt, 160)
+	parallax_foreground.offset = math.mod(parallax_foreground.offset + 20 * dt, 160)
 
 	//Input
 	if rl.IsKeyDown(.SPACE) || rl.IsMouseButtonDown(.LEFT) {
@@ -198,23 +223,8 @@ handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.RAYWHITE)
 
-	rl.DrawTexturePro(
-		parallax_background.texture,
-		{0 + parallax_background.offset, 0, 144, 64},
-		{0, 16 * SCALING, 720, 64 * SCALING},
-		{0, 0},
-		0,
-		rl.WHITE,
-	)
-
-	rl.DrawTexturePro(
-		parallax_foreground.texture,
-		{0 + parallax_foreground.offset, 0, 144, 96},
-		{0, 0, 720, 96 * SCALING},
-		{0, 0},
-		0,
-		rl.WHITE,
-	)
+	draw_parallax_layer(parallax_background, 144, 160, 64, 16 * SCALING)
+	draw_parallax_layer(parallax_foreground, 144, 160, 96, 0)
 
 	rl.DrawText(cstr_h_score, SCALING, SCALING, 20, rl.BLACK)
 	rl.DrawText(cstr_score, SCALING, SCALING * 10, 20, rl.BLACK)
