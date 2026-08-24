@@ -163,8 +163,8 @@ handle_gameplay :: proc(obstacle_texture: rl.Texture2D) {
 
 	score = obstacle_velocity * score_timer.passed_time * (-0.001)
 
-	parallax_background.offset += 0.005
-	parallax_foreground.offset += 0.01
+	parallax_background.offset += 10 * dt
+	parallax_foreground.offset += 20 * dt
 
 	//Input
 	if rl.IsKeyDown(.SPACE) || rl.IsMouseButtonDown(.LEFT) {
