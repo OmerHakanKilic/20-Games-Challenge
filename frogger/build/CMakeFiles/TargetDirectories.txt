@@ -1,0 +1,3 @@
+/home/hakan/Projects/20-Games-Challenge/frogger/build/CMakeFiles/Frogger.dir
+/home/hakan/Projects/20-Games-Challenge/frogger/build/CMakeFiles/edit_cache.dir
+/home/hakan/Projects/20-Games-Challenge/frogger/build/CMakeFiles/rebuild_cache.dir

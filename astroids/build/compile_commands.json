@@ -1,0 +1,14 @@
+[
+{
+  "directory": "/home/hakan/Projects/20-Games-Challenge/astroids/build",
+  "command": "/usr/bin/c++  -I/home/hakan/Projects/20-Games-Challenge/astroids/include -std=gnu++17 -o CMakeFiles/OpenGLProject.dir/source/main.cpp.o -c /home/hakan/Projects/20-Games-Challenge/astroids/source/main.cpp",
+  "file": "/home/hakan/Projects/20-Games-Challenge/astroids/source/main.cpp",
+  "output": "CMakeFiles/OpenGLProject.dir/source/main.cpp.o"
+},
+{
+  "directory": "/home/hakan/Projects/20-Games-Challenge/astroids/build",
+  "command": "/usr/bin/cc  -I/home/hakan/Projects/20-Games-Challenge/astroids/include  -o CMakeFiles/OpenGLProject.dir/source/glad.c.o -c /home/hakan/Projects/20-Games-Challenge/astroids/source/glad.c",
+  "file": "/home/hakan/Projects/20-Games-Challenge/astroids/source/glad.c",
+  "output": "CMakeFiles/OpenGLProject.dir/source/glad.c.o"
+}
+]
