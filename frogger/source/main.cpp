@@ -40,7 +40,7 @@ int main() {
   gamestate = MENU;
 
   Button but = {
-      .rec = {360, 240, 4 * SCALE, 2 * SCALE},
+      .rec = {2 * SCALE, 2 * SCALE, 4 * SCALE, 2 * SCALE},
       .color = WHITE,
       .texture = LoadTexture("../assets/play-button.png"),
       .is_pressed = false,
@@ -101,7 +101,7 @@ void draw_buttons() {
 
 void init_gameplay() {
   player = {
-      .rec = {200, 200, 1 * SCALE, 1 * SCALE},
+      .rec = {4 * SCALE, 5 * SCALE, 1 * SCALE, 1 * SCALE},
       .color = WHITE,
       .texture = LoadTexture("./../assets/player.png"),
   };
