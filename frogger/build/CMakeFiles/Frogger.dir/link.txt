@@ -1,1 +1,0 @@
-/usr/bin/c++ -Wl,--dependency-file=CMakeFiles/Frogger.dir/link.d CMakeFiles/Frogger.dir/source/main.cpp.o -o Frogger  /usr/lib64/libraylib.so -L/usr/lib64 -lraylib

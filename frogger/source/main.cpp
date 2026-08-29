@@ -1,4 +1,6 @@
 #include "raylib.h"
+#include <cstdlib>
+#include <ctime>
 #include <iostream>
 #include <vector>
 
@@ -8,6 +10,9 @@ void draw_buttons();
 void init_gameplay();
 void handle_gameplay();
 void handle_input();
+void spawn_cars();
+void move_cars(float dt);
+void draw_cars();
 void handle_death();
 
 enum {
@@ -16,15 +21,25 @@ enum {
   DEATH,
 } gamestate;
 
+enum Direction {
+  UP,
+  DOWN,
+  RIGHT,
+  LEFT,
+};
 struct Button {
-  Rectangle rec;
+  Rectangle source_rec;
+  Rectangle dest_rec;
   Color color;
   Texture2D texture;
   bool is_pressed;
 };
 
 struct Entity {
-  Rectangle rec;
+  Rectangle source_rec;
+  Rectangle dest_rec;
+  Vector2 origin;
+  float rotation;
   Color color;
   Texture2D texture;
 };
@@ -32,15 +47,19 @@ struct Entity {
 // Globals
 std::vector<Button> button_list;
 Entity player;
+std::vector<Entity> car_list;
 float SCALE = 150;
 
 int main() {
+
+  srand(time(0));
 
   InitWindow(9 * SCALE, 6 * SCALE, "Frogger");
   gamestate = MENU;
 
   Button but = {
-      .rec = {2 * SCALE, 2 * SCALE, 4 * SCALE, 2 * SCALE},
+      .source_rec = {0, 0, 72, 32},
+      .dest_rec = {2 * SCALE, 2 * SCALE, 4 * SCALE, 2 * SCALE},
       .color = WHITE,
       .texture = LoadTexture("../assets/play-button.png"),
       .is_pressed = false,
@@ -77,7 +96,7 @@ void handle_buttons() {
   auto mouse_position = GetMousePosition();
   for (int i = 0; i < button_list.size(); i++) {
 
-    if (CheckCollisionPointRec(mouse_position, button_list[i].rec) &&
+    if (CheckCollisionPointRec(mouse_position, button_list[i].dest_rec) &&
         IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
       button_list[i].is_pressed = true;
     }
@@ -94,38 +113,86 @@ void handle_buttons() {
 
 void draw_buttons() {
   for (int i = 0; i < button_list.size(); i++) {
-    DrawTexturePro(button_list[i].texture, {0, 0, 72, 32}, button_list[i].rec,
-                   {0, 0}, 0, button_list[i].color);
+    DrawTexturePro(button_list[i].texture, button_list[i].source_rec,
+                   button_list[i].dest_rec, {0, 0}, 0, button_list[i].color);
   }
 }
 
 void init_gameplay() {
   player = {
-      .rec = {4 * SCALE, 5 * SCALE, 1 * SCALE, 1 * SCALE},
+      .source_rec = {0, 0, 16, 16},
+      .dest_rec = {4 * SCALE, 5 * SCALE, 1 * SCALE, 1 * SCALE},
+      .origin = {(1 * SCALE) / 2, (1 * SCALE) / 2},
+      .rotation = 0,
       .color = WHITE,
       .texture = LoadTexture("./../assets/player.png"),
   };
+  spawn_cars();
 }
 
 void handle_gameplay() {
   // Input
   handle_input();
   // Update
-
+  float dt = GetFrameTime();
+  move_cars(dt);
   // Draw
   BeginDrawing();
   ClearBackground(BLUE);
-  DrawTexturePro(player.texture, {0, 0, 16, 16}, player.rec, {0, 0}, 0,
-                 player.color);
+  DrawTexturePro(player.texture, player.source_rec, player.dest_rec,
+                 player.origin, player.rotation, player.color);
+  draw_cars();
   EndDrawing();
 }
 
 void handle_input() {
-  if (IsKeyReleased(KEY_W)) {
-    player.rec.y -= SCALE;
+  if (IsKeyPressed(KEY_W)) {
+    player.dest_rec.y -= SCALE;
+    player.rotation = 0;
   }
-  if (IsKeyReleased(KEY_S)) {
-    player.rec.y += SCALE;
+  if (IsKeyPressed(KEY_S)) {
+    player.dest_rec.y += SCALE;
+    player.rotation = 180;
+  }
+  if (IsKeyPressed(KEY_A)) {
+    player.dest_rec.x -= SCALE;
+    player.rotation = 270;
+  }
+  if (IsKeyPressed(KEY_D)) {
+    player.dest_rec.x += SCALE;
+    player.rotation = 90;
+  }
+}
+
+void spawn_cars() {
+  float spawn_y = (rand() % 5) * SCALE;
+
+  Entity temp = {
+      .source_rec = {0, 0, 16},
+      .dest_rec =
+          {
+              0,
+              spawn_y,
+              1 * SCALE,
+              1 * SCALE,
+          },
+      .origin = {(16 * SCALE) / 2, (16 * SCALE) / 2},
+      .color = WHITE,
+      .texture = LoadTexture("./../assets/car.png"),
+  };
+  car_list.push_back(temp);
+}
+
+void draw_cars() {
+  for (int i = 0; i < car_list.size(); i++) {
+    DrawTexturePro(car_list[i].texture, {0, 0, 16, 16}, car_list[i].dest_rec,
+                   {0, 0}, 0, car_list[i].color);
+  }
+}
+
+void move_cars(float dt) {
+  for (int i = 0; i < car_list.size(); i++) {
+    car_list[i].dest_rec.x += SCALE * dt;
   }
 }
 
