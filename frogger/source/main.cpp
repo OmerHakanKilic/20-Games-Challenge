@@ -8,11 +8,13 @@ void handle_menu();
 void handle_buttons();
 void draw_buttons();
 void init_gameplay();
+void spawn_background_tiles();
 void handle_gameplay();
 void handle_input();
 void spawn_cars();
 void move_cars(float dt);
 void draw_cars();
+void draw_tiles();
 void handle_death();
 
 enum {
@@ -48,18 +50,19 @@ struct Entity {
 std::vector<Button> button_list;
 Entity player;
 std::vector<Entity> car_list;
-float SCALE = 150;
+std::vector<Entity> tile_list;
+float SCALE = 50;
 
 int main() {
 
   srand(time(0));
 
-  InitWindow(9 * SCALE, 6 * SCALE, "Frogger");
+  InitWindow(14 * SCALE, 14 * SCALE, "Frogger");
   gamestate = MENU;
 
   Button but = {
       .source_rec = {0, 0, 72, 32},
-      .dest_rec = {2 * SCALE, 2 * SCALE, 4 * SCALE, 2 * SCALE},
+      .dest_rec = {5 * SCALE, 6 * SCALE, 4 * SCALE, 2 * SCALE},
       .color = WHITE,
       .texture = LoadTexture("../assets/play-button.png"),
       .is_pressed = false,
@@ -121,13 +124,33 @@ void draw_buttons() {
 void init_gameplay() {
   player = {
       .source_rec = {0, 0, 16, 16},
-      .dest_rec = {4 * SCALE, 5 * SCALE, 1 * SCALE, 1 * SCALE},
+      .dest_rec = {7 * SCALE, 13 * SCALE + SCALE / 2, 1 * SCALE, 1 * SCALE},
       .origin = {(1 * SCALE) / 2, (1 * SCALE) / 2},
       .rotation = 0,
       .color = WHITE,
       .texture = LoadTexture("./../assets/player.png"),
   };
   spawn_cars();
+  spawn_background_tiles();
+}
+
+void spawn_background_tiles() {
+  Texture2D road_texture = LoadTexture("./../assets/road-tile.png");
+
+  for (int i = 0; i < 14; i++) {
+    for (int j = 0; j < 7; j++) {
+      Entity temp = {
+          .source_rec = {0, 0, 16, 32},
+          .dest_rec = {i * SCALE, 2 * j * SCALE, 1 * SCALE, 2 * SCALE},
+          .origin = {0, 0},
+          .rotation = 0,
+          .color = WHITE,
+          .texture = road_texture,
+      };
+
+      tile_list.push_back(temp);
+    }
+  }
 }
 
 void handle_gameplay() {
@@ -139,9 +162,12 @@ void handle_gameplay() {
   // Draw
   BeginDrawing();
   ClearBackground(BLUE);
+  draw_tiles();
+
   DrawTexturePro(player.texture, player.source_rec, player.dest_rec,
                  player.origin, player.rotation, player.color);
   draw_cars();
+  DrawRectangleRec(player.dest_rec, RED);
   EndDrawing();
 }
 
@@ -187,6 +213,14 @@ void draw_cars() {
   for (int i = 0; i < car_list.size(); i++) {
     DrawTexturePro(car_list[i].texture, {0, 0, 16, 16}, car_list[i].dest_rec,
                    {0, 0}, 0, car_list[i].color);
+  }
+}
+
+void draw_tiles() {
+  for (int i = 0; i < tile_list.size(); i++) {
+    DrawTexturePro(tile_list[i].texture, tile_list[i].source_rec,
+                   tile_list[i].dest_rec, tile_list[i].origin,
+                   tile_list[i].rotation, tile_list[i].color);
   }
 }
 
