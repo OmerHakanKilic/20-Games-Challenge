@@ -40,6 +40,7 @@ struct Button {
 struct Entity {
   Rectangle source_rec;
   Rectangle dest_rec;
+  Rectangle hitbox;
   Vector2 origin;
   float rotation;
   Color color;
@@ -125,11 +126,14 @@ void init_gameplay() {
   player = {
       .source_rec = {0, 0, 16, 16},
       .dest_rec = {7 * SCALE, 13 * SCALE + SCALE / 2, 1 * SCALE, 1 * SCALE},
+      .hitbox = {0, 0, 1 * SCALE, 1 * SCALE},
       .origin = {(1 * SCALE) / 2, (1 * SCALE) / 2},
       .rotation = 0,
       .color = WHITE,
       .texture = LoadTexture("./../assets/player.png"),
   };
+  player.hitbox = {player.dest_rec.x - player.origin.x,
+                   player.dest_rec.y - player.origin.y, 1 * SCALE, 1 * SCALE};
   spawn_cars();
   spawn_background_tiles();
 }
@@ -168,24 +172,29 @@ void handle_gameplay() {
                  player.origin, player.rotation, player.color);
   draw_cars();
   DrawRectangleRec(player.dest_rec, RED);
+  DrawRectangleRec(player.hitbox, BLUE);
   EndDrawing();
 }
 
 void handle_input() {
   if (IsKeyPressed(KEY_W)) {
     player.dest_rec.y -= SCALE;
+    player.hitbox.y -= SCALE;
     player.rotation = 0;
   }
   if (IsKeyPressed(KEY_S)) {
     player.dest_rec.y += SCALE;
+    player.hitbox.y += SCALE;
     player.rotation = 180;
   }
   if (IsKeyPressed(KEY_A)) {
     player.dest_rec.x -= SCALE;
+    player.hitbox.x -= SCALE;
     player.rotation = 270;
   }
   if (IsKeyPressed(KEY_D)) {
     player.dest_rec.x += SCALE;
+    player.hitbox.x += SCALE;
     player.rotation = 90;
   }
 }
