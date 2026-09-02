@@ -12,7 +12,9 @@ void spawn_background_tiles();
 void handle_gameplay();
 void handle_input();
 void spawn_cars();
+void spawn_car();
 void move_cars(float dt);
+void check_player_collision();
 void draw_cars();
 void draw_tiles();
 void handle_death();
@@ -41,6 +43,7 @@ struct Entity {
   Rectangle source_rec;
   Rectangle dest_rec;
   Rectangle hitbox;
+  float direction;
   Vector2 origin;
   float rotation;
   Color color;
@@ -179,6 +182,7 @@ void handle_gameplay() {
   // Update
   float dt = GetFrameTime();
   move_cars(dt);
+  check_player_collision();
   // Draw
   BeginDrawing();
   ClearBackground(BLUE);
@@ -214,18 +218,26 @@ void handle_input() {
 }
 
 void spawn_cars() {
-  float spawn_y = (rand() % 5) * SCALE;
+  for (int i = 0; i < 5; i++) {
+    spawn_car();
+  }
+}
+void spawn_car() {
+  float direction = (rand() % 2) * 2 - 1;
+  float spawn_y = ((rand() % 6) + 7) * SCALE;
+  float spawn_x = 0 + (-1 * direction * 7 * SCALE) + 7 * SCALE;
 
   Entity temp = {
-      .source_rec = {0, 0, 16},
+      .source_rec = {0, 0, direction * 16 * -1, 16},
       .dest_rec =
           {
-              0,
+              spawn_x,
               spawn_y,
               1 * SCALE,
               1 * SCALE,
           },
-      .origin = {(16 * SCALE) / 2, (16 * SCALE) / 2},
+      .direction = direction,
+      .origin = {0, 0},
       .color = WHITE,
       .texture = LoadTexture("./../assets/car.png"),
   };
@@ -234,8 +246,8 @@ void spawn_cars() {
 
 void draw_cars() {
   for (int i = 0; i < car_list.size(); i++) {
-    DrawTexturePro(car_list[i].texture, {0, 0, 16, 16}, car_list[i].dest_rec,
-                   {0, 0}, 0, car_list[i].color);
+    DrawTexturePro(car_list[i].texture, car_list[i].source_rec,
+                   car_list[i].dest_rec, {0, 0}, 0, car_list[i].color);
   }
 }
 
@@ -249,7 +261,17 @@ void draw_tiles() {
 
 void move_cars(float dt) {
   for (int i = 0; i < car_list.size(); i++) {
-    car_list[i].dest_rec.x += SCALE * dt;
+    car_list[i].dest_rec.x += car_list[i].direction * SCALE * dt;
+  }
+}
+
+void check_player_collision() {
+  for (int i = 0; i < car_list.size(); i++) {
+    if (CheckCollisionRecs(player.hitbox, car_list[i].dest_rec)) {
+      std::cout << "Car collision!" << std::endl;
+      car_list.clear();
+      gamestate = MENU;
+    }
   }
 }
 
