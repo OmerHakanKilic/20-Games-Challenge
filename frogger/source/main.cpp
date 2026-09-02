@@ -140,16 +140,32 @@ void init_gameplay() {
 
 void spawn_background_tiles() {
   Texture2D road_texture = LoadTexture("./../assets/road-tile.png");
+  Texture2D water_texture = LoadTexture("./../assets/water-tile.png");
+  Texture2D grass_texture = LoadTexture("./../assets/grass-tile.png");
+  Texture2D current_texture = road_texture;
+  Rectangle temp_source_rec = {0, 0, 16, 16};
 
   for (int i = 0; i < 14; i++) {
-    for (int j = 0; j < 7; j++) {
+    for (int j = 0; j < 14; j++) {
+      if (j == 13 || j == 6) {
+        current_texture = grass_texture;
+      } else if (j < 6) {
+        current_texture = water_texture;
+      } else {
+        current_texture = road_texture;
+      }
+      if (j < 13 && j % 2 == 1) {
+        temp_source_rec = {0, 0, 16, 16};
+      } else {
+        temp_source_rec = {0, 16, 16, 16};
+      }
       Entity temp = {
-          .source_rec = {0, 0, 16, 32},
-          .dest_rec = {i * SCALE, 2 * j * SCALE, 1 * SCALE, 2 * SCALE},
+          .source_rec = temp_source_rec,
+          .dest_rec = {i * SCALE, 1 * j * SCALE, 1 * SCALE, 1 * SCALE},
           .origin = {0, 0},
           .rotation = 0,
           .color = WHITE,
-          .texture = road_texture,
+          .texture = current_texture,
       };
 
       tile_list.push_back(temp);
@@ -171,8 +187,6 @@ void handle_gameplay() {
   DrawTexturePro(player.texture, player.source_rec, player.dest_rec,
                  player.origin, player.rotation, player.color);
   draw_cars();
-  DrawRectangleRec(player.dest_rec, RED);
-  DrawRectangleRec(player.hitbox, BLUE);
   EndDrawing();
 }
 
